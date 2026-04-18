@@ -304,3 +304,13 @@ const legalCards = document.querySelectorAll('.legalitas-card');
 legalCards.forEach((card, i) => {
   card.style.transitionDelay = `${i * 0.1}s`;
 });
+
+/* ===== WHATSAPP FLOATING BUTTON ===== */
+const waFloat = document.getElementById('waFloat');
+if (waFloat) {
+  const waNumber = '6281321773340';
+  const waMessage = encodeURIComponent(
+    'Halo PT Panca Jaya Alkesindo,\n\nSaya tertarik dengan produk alat artroskopi Anda. Bisakah saya mendapatkan informasi lebih lanjut?\n\nTerima kasih.'
+  );
+  waFloat.href = `https://wa.me/${waNumber}?text=${waMessage}`;
+}
