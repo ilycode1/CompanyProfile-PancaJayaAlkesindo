@@ -278,16 +278,7 @@ function normalizeWaNumber(raw) {
 }
 
 async function sendContactEmail({ nama, institusi, email, telepon, pesan }) {
-  const env = import.meta.env;
-  const cfg = {
-    endpoint: env.OMAILER_ENDPOINT,
-    smtpHost: env.SMTP_HOST,
-    smtpPort: env.SMTP_PORT,
-    authEmail: env.SMTP_AUTH_EMAIL,
-    authPassword: env.SMTP_AUTH_PASSWORD,
-    senderName: env.SMTP_SENDER_NAME,
-    recipient: env.SMTP_RECIPIENT,
-  };
+  const cfg = window.OMAILER_CONFIG;
   if (!cfg || !cfg.endpoint || !cfg.authEmail || !cfg.authPassword) {
     throw new Error("OMAILER_CONFIG tidak lengkap. Pastikan config.js ter-load dan terisi.");
   }
