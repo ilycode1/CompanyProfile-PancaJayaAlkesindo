@@ -8,7 +8,6 @@
 const navbar = document.getElementById("navbar");
 const hamburger = document.getElementById("hamburger");
 const navLinks = document.getElementById("navLinks");
-const env = import.meta.env;
 
 window.addEventListener(
   "scroll",
@@ -279,6 +278,7 @@ function normalizeWaNumber(raw) {
 }
 
 async function sendContactEmail({ nama, institusi, email, telepon, pesan }) {
+  const env = import.meta.env;
   const cfg = {
     endpoint: env.OMAILER_ENDPOINT,
     smtpHost: env.SMTP_HOST,
