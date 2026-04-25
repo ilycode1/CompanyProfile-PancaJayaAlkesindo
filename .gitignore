@@ -1,0 +1,17 @@
+# Env (kredensial, tidak untuk commit)
+.env
+.env.local
+.env.*.local
+
+# Runtime config (static HTML — memuat kredensial omailer ke window.OMAILER_CONFIG)
+config.js
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

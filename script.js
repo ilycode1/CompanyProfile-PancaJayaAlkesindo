@@ -202,7 +202,7 @@ sections.forEach(s => activeNavObserver.observe(s));
 /* ===== CONTACT FORM ===== */
 const form = document.getElementById('kontakForm');
 
-form.addEventListener('submit', (e) => {
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const btn = form.querySelector('button[type="submit"]');
@@ -222,26 +222,113 @@ form.addEventListener('submit', (e) => {
     return;
   }
 
-  // Simulate send (ganti dengan fetch/API sungguhan)
-  btn.disabled = true;
-  btn.textContent = 'Mengirim...';
-
-  // Build WhatsApp link as fallback (common for Indonesian businesses)
+  // WhatsApp fallback link (ditampilkan bersama status sukses/gagal)
   const waMessage = encodeURIComponent(
     `Halo PT Panca Jaya Alkesindo,\n\nSaya ${nama} dari ${institusi}.\nEmail: ${email}\nTelp: ${telepon || '-'}\n\nPesan:\n${pesan}`
   );
-  const waLink = `https://wa.me/6281321773340?text=${waMessage}`;
+  const waLink = `https://wa.me/628132177334?text=${waMessage}`;
 
-  setTimeout(() => {
-    showFormMessage('Pesan berhasil dikirim! Kami akan menghubungi Anda dalam 1×24 jam kerja.\n\nAlternatif: Anda juga dapat menghubungi kami langsung via WhatsApp.', 'success', waLink);
+  btn.disabled = true;
+  btn.textContent = 'Mengirim...';
+
+  try {
+    await sendContactEmail({ nama, institusi, email, telepon, pesan });
+    showFormMessage(
+      'Pesan berhasil dikirim! Kami akan merespons dalam 1×24 jam kerja.\n\nAlternatif: Anda juga dapat menghubungi kami langsung via WhatsApp.',
+      'success',
+      waLink
+    );
     form.reset();
+  } catch (err) {
+    console.error('[kontak] gagal kirim:', err);
+    showFormMessage(
+      'Maaf, pengiriman pesan gagal. Silakan coba lagi atau hubungi kami langsung via WhatsApp.',
+      'error',
+      waLink
+    );
+  } finally {
     btn.disabled = false;
     btn.textContent = 'Kirim Pesan →';
-  }, 1200);
+  }
 });
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/* ===== OMAILER SENDER ===== */
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function normalizeWaNumber(raw) {
+  const digits = String(raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('62')) return digits;
+  if (digits.startsWith('0'))  return '62' + digits.slice(1);
+  return digits;
+}
+
+async function sendContactEmail({ nama, institusi, email, telepon, pesan }) {
+  const cfg = window.OMAILER_CONFIG;
+  if (!cfg || !cfg.endpoint || !cfg.authEmail || !cfg.authPassword) {
+    throw new Error('OMAILER_CONFIG tidak lengkap. Pastikan config.js ter-load dan terisi.');
+  }
+
+  const subject = `Pesan Baru dari ${nama} — ${institusi}`;
+  const wa = normalizeWaNumber(telepon);
+
+  const safe = {
+    nama:      escapeHtml(nama),
+    institusi: escapeHtml(institusi),
+    email:     escapeHtml(email),
+    telepon:   escapeHtml(telepon || '-'),
+    pesan:     escapeHtml(pesan).replace(/\n/g, '<br>'),
+  };
+
+  const replySubject = encodeURIComponent('Re: ' + subject);
+  const body_html = `<!doctype html>
+<html lang="id">
+<meta charset="utf-8">
+<body style="font-family:Arial,sans-serif;margin:16px;color:#111">
+  <h3 style="margin:0 0 12px">Informasi Kontak Baru dari Website PT Panca Jaya Alkesindo</h3>
+  <p style="margin:0 0 12px;line-height:1.6">
+    <b>Nama:</b> ${safe.nama}<br>
+    <b>Institusi:</b> ${safe.institusi}<br>
+    <b>Email:</b> ${safe.email}<br>
+    <b>WA / Telp:</b> ${safe.telepon}
+  </p>
+  <p style="margin:0 0 12px;line-height:1.6"><b>Pesan:</b><br>${safe.pesan}</p>
+  <p style="margin:0">
+    <a href="mailto:${encodeURIComponent(email)}?subject=${replySubject}">Balas Email</a>
+    ${wa ? `&nbsp;|&nbsp;<a href="https://wa.me/${wa}">WhatsApp</a>` : ''}
+  </p>
+</body>
+</html>`;
+
+  const payload = {
+    smtp_host:     cfg.smtpHost,
+    smtp_port:     Number(cfg.smtpPort),
+    auth_email:    cfg.authEmail,
+    auth_password: cfg.authPassword,
+    sender_name:   cfg.senderName,
+    recipient:     cfg.recipient,
+    subject,
+    body_html,
+  };
+
+  const encoded = encodeURIComponent(JSON.stringify(payload));
+  const response = await fetch(`${cfg.endpoint}?data=${encoded}`);
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || `Omailer error ${response.status}`);
+  }
 }
 
 function showFormMessage(text, type, waLink = null) {
@@ -308,7 +395,7 @@ legalCards.forEach((card, i) => {
 /* ===== WHATSAPP FLOATING BUTTON ===== */
 const waFloat = document.getElementById('waFloat');
 if (waFloat) {
-  const waNumber = '6281321773340';
+  const waNumber = '628132177334';
   const waMessage = encodeURIComponent(
     'Halo PT Panca Jaya Alkesindo,\n\nSaya tertarik dengan produk alat artroskopi Anda. Bisakah saya mendapatkan informasi lebih lanjut?\n\nTerima kasih.'
   );
